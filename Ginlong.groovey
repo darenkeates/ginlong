@@ -58,3 +58,95 @@ def login() {
         } catch (e) {
           if (debugOutput) log.debug "!error when checking expiration date: $e ($expiration) [$expireParts.length] {$it.value}"
         }
+        }
+        allCookies = allCookies + it.value + ';'
+        if (cookie != ".ASPXAUTH_TH_A=") {
+          if (it.value.split('=')[1].trim() != "") {
+            if (!skipCookie) {
+              if (debugOutput) log.debug "Adding cookie to collection: $cookie"
+              device.data.cookiess = device.data.cookiess + cookie + ';'
+              if (debugOutput) log.debug "cookies: ${device.data.cookiess}"
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    log.warn "Something went wrong during login: $e"
+  }
+  return device.data.cookiess;
+}
+//getData calls for the login and then the Plant data from m.ginlong API call. 
+def getData() {
+  try {
+    device.data.cookiess = login()
+    if ( debugOutput ) log.debug "COOKIES: ${device.data.cookiess}"
+    Map params = [
+      uri:"http://m.ginlong.com/cpro/epc/plantDetail/showPlantDetailAjax.json?plantId=380340",
+      contentType: 'application/json',
+      textParser: false,
+      requestContentType:'application/json',
+      headers:[
+        'accept':'application/json',
+        'accept-language':"en-GB,en;q=0.5",
+        'upgrade-insecure-requests':"1",
+        'user-agent':"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36 Edge/18.18362",
+        'accept-encoding':"gzip, deflate, br, peerdist","x-p2p-peerdist":"Version=1.1","x-p2p-peerdistex":"MinContentInformation=1.0, MaxContentInformation=2.0",
+        'cookie':device.data.cookiess,
+      ]
+    ]
+    if (debugOutput) log.debug "About to call Plant Data"
+    httpGet(params) { response ->
+      if (response.data.result.ownerUser.isAccept == 1){
+        log.info "GET SOLAR DATA,$response.data.result.ownerUser.isAccept"				
+        log.info response.data.result.plantAllWapper.plantData.batterySoc
+        parseEventData(response.data.result.plantAllWapper.plantData)
+      }
+    }
+  } catch (e) {
+    log.warn "Error: ${e.message}"
+  }
+}
+// Parse event data deconstructs the web call into individual fields
+def parseEventData(Map results)
+  {
+  def debugOutput = false;
+  if (debugOutput) log.debug "About to parse event data"
+  results.each { name, value ->      
+    if (debugOutput) log.debug "Name :$name , Value $value"
+    if (name == 'batterySoc') sendEvent ( name: 'batterySoc' , 'value':  value )
+    if (name == 'energyBatteryInDay') sendEvent ( name: 'energyBatteryInDay' , 'value':  value )
+    if (name == 'energyBatteryInMonth') sendEvent ( name: 'energyBatteryInMonth' , 'value':  value )
+    if (name == 'energyBatteryInTotal') sendEvent ( name: 'energyBatteryInTotal' , 'value':  value )
+    if (name == 'energyBatteryInYear') sendEvent ( name: 'energyBatteryInYear' , 'value':  value )
+    if (name == 'energyBatteryOutDay') sendEvent ( name: 'energyBatteryOutDay' , 'value':  value )
+    if (name == 'energyBatteryOutMonth') sendEvent ( name: 'energyBatteryOutMonth' , 'value':  value )
+    if (name == 'energyBatteryOutTotal') sendEvent ( name: 'energyBatteryOutTotal' , 'value':  value )
+    if (name == 'energyBatteryOutYear') sendEvent ( name: 'energyBatteryOutYear' , 'value':  value )
+    if (name == 'energyBuyDay') sendEvent ( name: 'energyBuyDay' , 'value':  value )
+    if (name == 'energyBuyMonth') sendEvent ( name: 'energyBuyMonth' , 'value':  value )
+    if (name == 'energyBuyTotal') sendEvent ( name: 'energyBuyTotal' , 'value':  value )
+    if (name == 'energyBuyYear') sendEvent ( name: 'energyBuyYear' , 'value':  value )
+    if (name == 'energyMonth') sendEvent ( name: 'energyMonth' , 'value':  value )
+    if (name == 'energySellDay') sendEvent ( name: 'energySellDay' , 'value':  value )
+    if (name == 'energySellMonth') sendEvent ( name: 'energySellMonth' , 'value':  value )
+    if (name == 'energySellTotal') sendEvent ( name: 'energySellTotal' , 'value':  value )
+    if (name == 'energySellYear') sendEvent ( name: 'energySellYear' , 'value':  value )
+    if (name == 'energyToday') sendEvent ( name: 'energyToday' , 'value':  value )
+    if (name == 'energyTotal') sendEvent ( name: 'energyTotal' , 'value':  value )
+    if (name == 'energyTotalReal') sendEvent ( name: 'energyTotalReal' , 'value':  value )
+    if (name == 'energyUseageMonth') sendEvent ( name: 'energyUseageMonth' , 'value':  value )
+    if (name == 'energyUseageToday') sendEvent ( name: 'energyUseageToday' , 'value':  value )
+    if (name == 'energyUseageTotal') sendEvent ( name: 'energyUseageTotal' , 'value':  value )
+    if (name == 'energyUseageYear') sendEvent ( name: 'energyUseageYear' , 'value':  value )
+    if (name == 'energyYear') sendEvent ( name: 'energyYear' , 'value':  value )
+    if (name == 'incomeMonth') sendEvent ( name: 'incomeMonth' , 'value':  value )
+    if (name == 'incomeToday') sendEvent ( name: 'incomeToday' , 'value':  value )
+    if (name == 'incomeTotal') sendEvent ( name: 'incomeTotal' , 'value':  value )
+    if (name == 'incomeTotalReal') sendEvent ( name: 'incomeTotalReal' , 'value':  value )
+    if (name == 'power') sendEvent ( name: 'power' , 'value':  value )
+    if (name == 'powerBattery') sendEvent ( name: 'powerBattery' , 'value':  value )
+    if (name == 'powerUseage') sendEvent ( name: 'powerUseage' , 'value':  value )
+
+  }
+}
